@@ -4,9 +4,7 @@
 
 DiscordAlert watches Windows for Discord desktop notifications and shows a fullscreen themed alert until you dismiss it with **Esc**, **Enter**, or **Dismiss**.
 
-<p align="center">
-  <img src="assets/alert-cyan.jpg" alt="DiscordAlert notification preview" width="520" />
-</p>
+
 
 ---
 
