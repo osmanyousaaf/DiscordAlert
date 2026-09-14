@@ -2,9 +2,11 @@
 
 **Never miss a Discord DM again.**
 
-DiscordAlert watches Windows for Discord desktop notifications and throws a fullscreen glass-style alert on your screen until you dismiss it with **Esc**, **Enter**, or **OK**.
+DiscordAlert watches Windows for Discord desktop notifications and shows a fullscreen themed alert until you dismiss it with **Esc**, **Enter**, or **Dismiss**.
 
-Built for people who keep Discord muted, buried under windows, or open on another monitor — and still need to *actually* notice when someone messages them.
+<p align="center">
+  <img src="assets/alert-cyan.jpg" alt="DiscordAlert notification preview" width="520" />
+</p>
 
 ---
 
@@ -24,7 +26,7 @@ Optional single-file build:
 |---|---|
 | **Platform** | Windows 10 / 11 (64-bit) |
 | **Install** | First launch opens the setup wizard |
-| **Dismiss** | `Esc` · `Enter` · Dismiss button |
+| **Dismiss** | `Esc` · `Enter` · Dismiss / View message |
 
 ### If Windows / Chrome says “Virus detected”
 
@@ -34,10 +36,8 @@ This is a **false positive**. DiscordAlert is unsigned open-source software; Win
 1. Open **Windows Security → Virus & threat protection → Protection history**
 2. Find `DiscordAlert.exe` → **Actions → Allow / Restore**
 3. Or: right-click the file → **Properties → Unblock** → Apply  
-4. Or add an exclusion for the folder where you keep DiscordAlert
 
-**Submit as false positive (helps everyone):**  
-https://www.microsoft.com/en-us/wdsi/filesubmission
+**Submit as false positive:** https://www.microsoft.com/en-us/wdsi/filesubmission
 
 > Tip: the **ZIP / folder build** is flagged much less often than a raw `.exe` download.
 
@@ -48,55 +48,60 @@ https://www.microsoft.com/en-us/wdsi/filesubmission
 1. Download [`DiscordAlert-Windows.zip`](https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert-Windows.zip) and unzip it
 2. Run `DiscordAlert.exe` — the **Setup wizard** opens on first launch:
    - Click **Install**
-   - Pick a **UI Mode** (5 styles: Cyan HUD, Nebula Glass, Emerald Hex, Classic Midnight, Amber Industrial)
+   - Pick a **UI Mode** (5 styles below)
    - **Agree** to the terms
    - Click **Finish**
 3. When Windows asks for **notification access**, click **Allow**
-4. In Discord:
-   - **Settings → Notifications**
-   - Turn **ON** Desktop Notifications
-   - Turn **ON** notifications for Direct Messages
-5. Keep DiscordAlert running in the background
-6. Get a DM → fullscreen **“New message appears”** alert shows up
+4. In Discord → **Settings → Notifications** → turn **ON** Desktop Notifications + DMs
+5. Keep DiscordAlert running — every new Discord notification queues a popup
 
 To re-run setup later, delete `%LOCALAPPDATA%\DiscordAlert\config.json` and launch again.
 
 ### Optional: start with Windows
 
-1. Press `Win + R`, type `shell:startup`, press Enter
-2. Drop a shortcut to `DiscordAlert.exe` in that folder
+1. Press `Win + R`, type `shell:startup`, press Enter  
+2. Drop a shortcut to `DiscordAlert.exe` in that folder  
 
 ---
 
-## What it looks like
+## UI modes
 
-A dark glassmorphism popup (frosted card, bell icon, clean OK button) over a deep blue grid — not a tiny toast you’ll ignore.
+Pick one of these styles during setup:
 
-- Title: **new message appears**
-- Shows sender / message preview when Discord provides it
-- Stays on top until you dismiss it
+<p align="center">
+  <img src="assets/ui-modes.jpg" alt="Five DiscordAlert UI modes" width="720" />
+</p>
+
+| Mode | Look |
+|---|---|
+| **Cyan HUD** | Classic tech borders |
+| **Nebula Glass** | Soft purple glass |
+| **Emerald Hex** | Green cyber look |
+| **Classic Midnight** | Clean & classic |
+| **Amber Industrial** | Bold orange frame |
+
+Glass-style preview:
+
+<p align="center">
+  <img src="assets/alert-glass.png" alt="Glass alert style" width="420" />
+</p>
 
 ---
 
-## Why every message triggers (not just the first)
+## Features
 
-Older versions only watched notification *IDs*. Discord often **updates the same toast** for the next DM, so message 2 and 3 got ignored.
-
-DiscordAlert now:
-
-- Listens in a **background thread** (never pauses while a popup is open)
-- **Queues** alerts so later messages aren’t lost
-- Detects **content changes**, not just new IDs
-- Lets you dismiss with **Esc / Enter / OK**, then shows the next queued alert
+- Fullscreen **“New message appears”** alert for every Discord notification
+- Messages are **queued** — dismiss one, the next one shows
+- Setup wizard with UI mode + terms
+- Runs **locally** — no Discord login, no cloud
 
 ---
 
 ## Privacy
 
-- Runs **locally** on your PC
-- Reads Discord toasts through the official Windows notification listener
-- Does **not** log into Discord, scrape chats, or phone home
-- No account, no cloud, no telemetry
+- Runs on your PC only  
+- Does **not** log into Discord or upload messages  
+- No account, no telemetry  
 
 ---
 
@@ -107,13 +112,15 @@ pip install winsdk pyinstaller
 python auto.py
 ```
 
-Build a fresh exe:
+Build a fresh exe / zip:
 
 ```powershell
 .\build_exe.ps1
 ```
 
-Output lands in `dist\DiscordAlert.exe`.
+Output:
+- `dist\DiscordAlert.exe`
+- `dist\DiscordAlert-Windows.zip`
 
 ---
 
@@ -121,13 +128,12 @@ Output lands in `dist\DiscordAlert.exe`.
 
 - Windows 10 or 11 (64-bit)
 - Discord desktop app with desktop notifications enabled
-- Windows permission: **let apps access notifications**
+- Windows permission: let apps access notifications
 
 If alerts never show:
-
-1. Windows Settings → **Privacy & security → Notifications** → allow notification access  
-2. Confirm Discord itself is showing normal Windows toasts  
-3. Check `%LOCALAPPDATA%\DiscordAlert\log.txt` if the windowed exe wrote errors
+1. Windows Settings → **Privacy & security → Notifications** → allow access  
+2. Confirm Discord shows normal Windows toasts  
+3. Check `%LOCALAPPDATA%\DiscordAlert\log.txt`  
 
 ---
 
@@ -139,5 +145,7 @@ Unofficial tool. Not affiliated with Discord Inc. Use responsibly.
 
 <p align="center">
   <b>Stay reachable.</b><br/>
-  <a href="https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert.exe">Download DiscordAlert.exe</a>
+  <a href="https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert-Windows.zip">Download ZIP</a>
+  ·
+  <a href="https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert.exe">Download EXE</a>
 </p>
