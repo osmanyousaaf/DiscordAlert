@@ -128,6 +128,39 @@ def _draw_bell(canvas, cx, cy, scale=1.0):
 
 
 # ---------------------------------------------------------------------------
+# Shared alert bus — every detected Discord message becomes one queued popup
+# ---------------------------------------------------------------------------
+
+class AlertBus:
+    """Thread-safe queue feeder.
+
+    - registry signals ALWAYS enqueue (one popup per Discord notification)
+    - title-badge is backup only (used when Discord skips Windows toasts);
+      ignored if registry already fired for that same message
+    """
+
+    def __init__(self, alert_queue: queue.Queue):
+        self.alert_queue = alert_queue
+        self._lock = threading.Lock()
+        self._last_registry = 0.0
+
+    def emit(self, source: str, title: str = "Discord", body: str = ""):
+        body = body or "Important system notification. Please review the details below."
+        with self._lock:
+            now = time.monotonic()
+            if source == "title-badge":
+                # Backup path only — don't double-popup when registry already caught it
+                if now - self._last_registry < 1.2:
+                    print(f"Skip {source} (registry already handled this message)", flush=True)
+                    return
+            elif source == "registry":
+                self._last_registry = now
+        print(f"ALERT [{source}]: queue popup", flush=True)
+        self.alert_queue.put((title, body))
+
+
+
+# ---------------------------------------------------------------------------
 # Discord detection via Windows notification registry (PRIMARY)
 # ---------------------------------------------------------------------------
 
@@ -169,13 +202,12 @@ class DiscordRegistryWatcher:
     """
     Polls LastNotificationAddedTime for Discord AUMIDs.
 
-    This is the reliable signal on Windows: Discord updates this value for
-    every desktop notification, even when those toasts never show up in
-    UserNotificationListener (which is why the old approach missed alerts).
+    Discord updates this for EVERY desktop notification — including ones that
+    never show up in UserNotificationListener.
     """
 
-    def __init__(self, alert_queue: queue.Queue):
-        self.alert_queue = alert_queue
+    def __init__(self, bus: AlertBus):
+        self.bus = bus
         self._stop = threading.Event()
 
     def stop(self):
@@ -192,14 +224,12 @@ class DiscordRegistryWatcher:
         if not present:
             print(
                 "WARNING: No Discord notification registry key found yet.\n"
-                "Send yourself one Discord DM with desktop notifications ON,\n"
-                "then DiscordAlert will latch onto it automatically.",
+                "Enable Discord desktop notifications and send a test DM.",
                 flush=True,
             )
 
         while not self._stop.is_set():
             try:
-                # Rediscover occasionally in case Discord first-runs later
                 for aumid in discover_discord_aumids():
                     if aumid not in last_seen:
                         last_seen[aumid] = read_last_notification_time(aumid)
@@ -210,119 +240,108 @@ class DiscordRegistryWatcher:
                     if current is None:
                         continue
                     if prev is None:
-                        # First time we see a value after Discord created the key —
-                        # seed only, don't alert (could be old).
                         last_seen[aumid] = current
                         print(f"Seeded {aumid} = {current}", flush=True)
                         continue
                     if current != prev:
                         last_seen[aumid] = current
                         print(
-                            f"Discord notification detected via registry "
-                            f"({aumid}: {prev} -> {current})",
+                            f"Registry change {aumid}: {prev} -> {current}",
                             flush=True,
                         )
-                        self.alert_queue.put((
-                            "Discord",
-                            "Important system notification. Please review the details below.",
-                        ))
+                        self.bus.emit("registry")
             except Exception:
                 traceback.print_exc()
 
-            self._stop.wait(0.2)
+            self._stop.wait(0.15)
 
 
-def start_registry_watcher(alert_queue: queue.Queue) -> DiscordRegistryWatcher:
-    watcher = DiscordRegistryWatcher(alert_queue)
-    t = threading.Thread(target=watcher.run, name="DiscordRegistryWatcher", daemon=True)
-    t.start()
+def start_registry_watcher(bus: AlertBus) -> DiscordRegistryWatcher:
+    watcher = DiscordRegistryWatcher(bus)
+    threading.Thread(target=watcher.run, name="DiscordRegistryWatcher", daemon=True).start()
     return watcher
 
 
 # ---------------------------------------------------------------------------
-# Optional winsdk listener (secondary — may be empty for Discord on some PCs)
+# Backup: Discord window title unread badge  e.g. "(3) #general - Discord"
 # ---------------------------------------------------------------------------
 
-def start_listener_watcher(alert_queue: queue.Queue):
-    """Best-effort: if Windows exposes Discord toasts, use their title/body."""
+def _discord_window_unread_counts():
+    """Return max unread count parsed from visible Discord window titles."""
+    import ctypes
+    from ctypes import wintypes
+    import re
 
-    def target():
-        try:
-            import asyncio
-            import hashlib
-            from winsdk.windows.ui.notifications import NotificationKinds
-            from winsdk.windows.ui.notifications.management import (
-                UserNotificationListener,
-                UserNotificationListenerAccessStatus,
-            )
-        except Exception as e:
-            print("winsdk not available for secondary listener:", e, flush=True)
-            return
+    user32 = ctypes.windll.user32
+    EnumWindows = user32.EnumWindows
+    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    IsWindowVisible = user32.IsWindowVisible
+    GetWindowTextLengthW = user32.GetWindowTextLengthW
+    GetWindowTextW = user32.GetWindowTextW
+    GetClassNameW = user32.GetClassNameW
 
-        def is_discord(notif) -> bool:
+    counts = []
+
+    def foreach(hwnd, _lparam):
+        if not IsWindowVisible(hwnd):
+            return True
+        length = GetWindowTextLengthW(hwnd)
+        if length <= 0:
+            return True
+        buf = ctypes.create_unicode_buffer(length + 1)
+        GetWindowTextW(hwnd, buf, length + 1)
+        title = buf.value or ""
+        if "discord" not in title.lower():
+            return True
+        cls = ctypes.create_unicode_buffer(256)
+        GetClassNameW(hwnd, cls, 256)
+        # Discord / Electron main window
+        if "Chrome_WidgetWin" not in (cls.value or ""):
+            return True
+        m = re.match(r"^\((\d+)\)\s+", title)
+        if m:
+            counts.append(int(m.group(1)))
+        else:
+            counts.append(0)
+        return True
+
+    EnumWindows(EnumWindowsProc(foreach), 0)
+    return max(counts) if counts else None
+
+
+class DiscordTitleWatcher:
+    """Fires when Discord's taskbar/title unread (N) increases — covers cases
+    where Discord skips a Windows toast (e.g. window focused)."""
+
+    def __init__(self, bus: AlertBus):
+        self.bus = bus
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
+
+    def run(self):
+        last = _discord_window_unread_counts()
+        print(f"Title badge watcher ready. Initial unread={last}", flush=True)
+        while not self._stop.is_set():
             try:
-                app = notif.app_info
-                if not app:
-                    return False
-                name = (app.display_info.display_name or "").lower()
-                aumid = (app.app_user_model_id or "").lower()
-                pfn = (app.package_family_name or "").lower()
-                blob = f"{name} {aumid} {pfn}"
-                return "discord" in blob
+                cur = _discord_window_unread_counts()
+                if cur is not None and last is not None and cur > last:
+                    # One popup per unread increase (handles jumps like 1→3)
+                    for i in range(cur - last):
+                        print(f"Title badge unread {last + i} -> {last + i + 1}", flush=True)
+                        self.bus.emit("title-badge")
+                if cur is not None:
+                    last = cur
             except Exception:
-                return False
+                traceback.print_exc()
+            self._stop.wait(0.4)
 
-        def extract_text(notif):
-            texts = []
-            try:
-                for binding in notif.notification.visual.bindings:
-                    for t in binding.get_text_elements():
-                        texts.append(t.text)
-            except Exception:
-                pass
-            title = texts[0] if texts else "Discord"
-            body = texts[1] if len(texts) > 1 else ""
-            return title, body
 
-        async def run():
-            listener = UserNotificationListener.current
-            access = await listener.request_access_async()
-            if access != UserNotificationListenerAccessStatus.ALLOWED:
-                print("Secondary listener: notification access not allowed.", flush=True)
-                return
-
-            seen = {}
-            print("Secondary UserNotificationListener started.", flush=True)
-            while True:
-                try:
-                    notes = await listener.get_notifications_async(NotificationKinds.TOAST)
-                    current_ids = set()
-                    for notif in notes:
-                        current_ids.add(notif.id)
-                        if not is_discord(notif):
-                            continue
-                        title, body = extract_text(notif)
-                        fp = hashlib.sha1(
-                            f"{notif.id}|{title}|{body}".encode("utf-8", "replace")
-                        ).hexdigest()
-                        if seen.get(notif.id) == fp:
-                            continue
-                        seen[notif.id] = fp
-                        print(f"Listener Discord toast: {title!r} / {body!r}", flush=True)
-                        alert_queue.put((title, body or "new message appears"))
-                    for stale in list(seen):
-                        if stale not in current_ids:
-                            del seen[stale]
-                except Exception as e:
-                    print("Secondary listener error:", e, flush=True)
-                await asyncio.sleep(0.5)
-
-        try:
-            asyncio.run(run())
-        except Exception:
-            traceback.print_exc()
-
-    threading.Thread(target=target, name="DiscordListenerWatcher", daemon=True).start()
+def start_title_watcher(bus: AlertBus):
+    watcher = DiscordTitleWatcher(bus)
+    threading.Thread(target=watcher.run, name="DiscordTitleWatcher", daemon=True).start()
+    return watcher
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +351,7 @@ def start_listener_watcher(alert_queue: queue.Queue):
 class AlertApp:
     def __init__(self):
         self.alert_queue = queue.Queue()
+        self.bus = AlertBus(self.alert_queue)
         self.root = tk.Tk()
         self.root.withdraw()
         self.root.title("DiscordAlert")
@@ -341,10 +361,10 @@ class AlertApp:
         self._showing = False
 
         self._show_started_toast()
-        start_registry_watcher(self.alert_queue)
-        start_listener_watcher(self.alert_queue)
+        start_registry_watcher(self.bus)
+        start_title_watcher(self.bus)
         self.root.after(150, self._poll_queue)
-        print("DiscordAlert UI ready.", flush=True)
+        print("DiscordAlert UI ready — every Discord notification will queue a popup.", flush=True)
 
     def _show_started_toast(self):
         toast = tk.Toplevel(self.root)
