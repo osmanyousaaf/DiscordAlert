@@ -1,0 +1,22 @@
+# Python / local env (do not ship)
+Lib/
+Scripts/
+Include/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# PyInstaller work files (keep the final exe in dist/)
+build/
+*.spec.bak
+
+# Editor / OS junk
+.idea/
+.vscode/
+*.log
+Thumbs.db
+Desktop.ini
+.DS_Store
