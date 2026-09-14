@@ -175,6 +175,9 @@ THEME_ORDER = ("cyan", "nebula", "emerald", "midnight", "amber")
 # Config helpers
 # ---------------------------------------------------------------------------
 
+SETUP_VERSION = "1.2.1"
+
+
 def load_config() -> dict:
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -195,7 +198,12 @@ def save_config(data: dict) -> None:
 
 def is_installed() -> bool:
     cfg = load_config()
-    return bool(cfg.get("installed") and cfg.get("terms_accepted") and cfg.get("theme") in THEMES)
+    return bool(
+        cfg.get("installed")
+        and cfg.get("terms_accepted")
+        and cfg.get("theme") in THEMES
+        and cfg.get("setup_version") == SETUP_VERSION
+    )
 
 
 def get_theme_id() -> str:
@@ -374,11 +382,15 @@ def focus_discord_window() -> bool:
 # ---------------------------------------------------------------------------
 
 class InstallWizard:
+    """First-run setup: Install → UI mode → Terms → Finish."""
+
+    WIN_W, WIN_H = 860, 680
+
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("DiscordAlert Setup")
-        self.root.geometry("820x640")
-        self.root.minsize(820, 640)
+        self.root.title("DiscordAlert Setup v1.2.1")
+        self.root.geometry(f"{self.WIN_W}x{self.WIN_H}")
+        self.root.minsize(self.WIN_W, self.WIN_H)
         self.root.resizable(False, False)
         self.root.configure(bg="#0e1218")
         self.theme_id = "midnight"
@@ -391,13 +403,18 @@ class InstallWizard:
     def _center(self):
         self.root.update_idletasks()
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        w, h = 820, 640
-        self.root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+        self.root.geometry(
+            f"{self.WIN_W}x{self.WIN_H}+{(sw - self.WIN_W) // 2}+{(sh - self.WIN_H) // 2}"
+        )
 
     def _build_shell(self):
+        # Use grid so header / body / nav never cover each other
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+
         header = tk.Frame(self.root, bg="#151a22", height=64)
-        header.pack(fill="x", side="top")
-        header.pack_propagate(False)
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_propagate(False)
         tk.Label(
             header, text="DiscordAlert Setup", font=("Segoe UI Semibold", 18),
             fg="#ffffff", bg="#151a22",
@@ -408,38 +425,55 @@ class InstallWizard:
         )
         self.step_label.pack(side="right", padx=24)
 
-        # Pack footer FIRST so it always stays visible at the bottom.
-        self.footer = tk.Frame(self.root, bg="#151a22", height=78)
-        self.footer.pack(fill="x", side="bottom")
-        self.footer.pack_propagate(False)
-
         self.body = tk.Frame(self.root, bg="#0e1218")
-        self.body.pack(fill="both", expand=True, padx=28, pady=(16, 8))
+        self.body.grid(row=1, column=0, sticky="nsew", padx=28, pady=(12, 0))
 
-    def _clear_body(self):
+        # Dedicated nav row — always visible, never clipped by theme cards
+        self.nav = tk.Frame(self.root, bg="#151a22", height=88)
+        self.nav.grid(row=2, column=0, sticky="ew")
+        self.nav.grid_propagate(False)
+
+    def _clear(self):
         for w in self.body.winfo_children():
             w.destroy()
-        for w in self.footer.winfo_children():
+        for w in self.nav.winfo_children():
             w.destroy()
 
-    def _btn(self, parent, text, command, primary=False, state="normal"):
-        bg = "#3b82f6" if primary else "#2a3140"
-        fg = "#ffffff"
-        b = tk.Button(
-            parent, text=text, command=command, font=("Segoe UI Semibold", 11),
-            bg=bg, fg=fg, activebackground="#60a5fa" if primary else "#3a4558",
-            activeforeground="#ffffff", relief="flat", padx=22, pady=10,
-            cursor="hand2", state=state, bd=0,
+    def _btn(self, parent, text, command, primary=False):
+        """High-visibility Windows buttons (avoid flat/bd=0 clipping issues)."""
+        if primary:
+            return tk.Button(
+                parent, text=text, command=command,
+                font=("Segoe UI Semibold", 12),
+                bg="#2563eb", fg="#ffffff",
+                activebackground="#3b82f6", activeforeground="#ffffff",
+                relief="raised", bd=2, padx=28, pady=8,
+                cursor="hand2", width=16,
+            )
+        return tk.Button(
+            parent, text=text, command=command,
+            font=("Segoe UI Semibold", 12),
+            bg="#374151", fg="#ffffff",
+            activebackground="#4b5563", activeforeground="#ffffff",
+            relief="raised", bd=2, padx=28, pady=8,
+            cursor="hand2", width=12,
         )
-        return b
+
+    def _set_nav(self, buttons):
+        """buttons = list of (label, command, primary) from right to left visually."""
+        # Place an inner frame centered vertically in the nav bar
+        inner = tk.Frame(self.nav, bg="#151a22")
+        inner.pack(side="right", padx=20, pady=18)
+        for text, command, primary in buttons:
+            self._btn(inner, text, command, primary=primary).pack(side="right", padx=8)
 
     def show_welcome(self):
-        self._clear_body()
+        self._clear()
         self.step_label.config(text="Step 1 of 4 — Install")
         tk.Label(
             self.body, text="Welcome to DiscordAlert",
             font=("Segoe UI Semibold", 26), fg="#ffffff", bg="#0e1218",
-        ).pack(anchor="w", pady=(12, 8))
+        ).pack(anchor="w", pady=(8, 8))
         tk.Label(
             self.body,
             text=(
@@ -448,11 +482,11 @@ class InstallWizard:
                 "and start watching for new messages."
             ),
             font=("Segoe UI", 12), fg="#a8b0bd", bg="#0e1218",
-            justify="left", wraplength=720,
+            justify="left", wraplength=760,
         ).pack(anchor="w")
 
         card = tk.Frame(self.body, bg="#151a22", padx=18, pady=16)
-        card.pack(anchor="w", fill="x", pady=(28, 0))
+        card.pack(anchor="w", fill="x", pady=(24, 0))
         for line in (
             "• Fullscreen alert for every Discord notification",
             "• Choose from 5 UI modes (classic + neon styles)",
@@ -460,13 +494,13 @@ class InstallWizard:
         ):
             tk.Label(card, text=line, font=("Segoe UI", 11), fg="#d7dde8", bg="#151a22").pack(anchor="w", pady=2)
 
-        self._btn(self.footer, "Install", self.show_theme_picker, primary=True).pack(
-            side="right", padx=24, pady=16
-        )
-        self._btn(self.footer, "Cancel", self.root.destroy).pack(side="right", pady=16)
+        self._set_nav([
+            ("Install →", self.show_theme_picker, True),
+            ("Cancel", self.root.destroy, False),
+        ])
 
     def show_theme_picker(self):
-        self._clear_body()
+        self._clear()
         self.step_label.config(text="Step 2 of 4 — UI Mode")
         tk.Label(
             self.body, text="Select UI Mode",
@@ -474,9 +508,9 @@ class InstallWizard:
         ).pack(anchor="w")
         tk.Label(
             self.body,
-            text="Pick how your message alerts will look. Classic Midnight is the clean option.",
+            text="Click a style below, then press Next. Classic Midnight is the clean option.",
             font=("Segoe UI", 11), fg="#8b95a5", bg="#0e1218",
-        ).pack(anchor="w", pady=(2, 10))
+        ).pack(anchor="w", pady=(2, 8))
 
         grid = tk.Frame(self.body, bg="#0e1218")
         grid.pack(fill="both", expand=True)
@@ -487,23 +521,25 @@ class InstallWizard:
             theme = THEMES[tid]
             selected = tid == self.theme_id
             card = tk.Frame(
-                grid, bg=theme["panel"], highlightthickness=3 if selected else 2,
+                grid, bg=theme["panel"],
+                highlightthickness=3 if selected else 2,
                 highlightbackground=theme["accent"] if selected else "#2a3140",
-                highlightcolor=theme["accent"], padx=8, pady=8, cursor="hand2",
+                highlightcolor=theme["accent"],
+                padx=8, pady=8, cursor="hand2",
             )
             card.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
-            swatch = tk.Canvas(card, width=180, height=54, bg=theme["bg"], highlightthickness=0)
+            swatch = tk.Canvas(card, width=170, height=48, bg=theme["bg"], highlightthickness=0)
             swatch.pack()
-            swatch.create_rectangle(6, 8, 174, 46, outline=theme["accent"], width=2)
-            swatch.create_oval(16, 16, 40, 40, outline=theme["accent"], width=2)
+            swatch.create_rectangle(6, 6, 164, 42, outline=theme["accent"], width=2)
+            swatch.create_oval(14, 12, 36, 34, outline=theme["accent"], width=2)
             swatch.create_text(
-                110, 28, text="New message", fill=theme["text"],
+                100, 24, text="New message", fill=theme["text"],
                 font=("Segoe UI", 9, "bold"),
             )
             tk.Label(
                 card, text=theme["name"], font=("Segoe UI Semibold", 11),
                 fg=theme["text"], bg=theme["panel"],
-            ).pack(anchor="w", pady=(6, 0))
+            ).pack(anchor="w", pady=(4, 0))
             tk.Label(
                 card, text=theme["blurb"], font=("Segoe UI", 9),
                 fg=theme["muted"], bg=theme["panel"],
@@ -525,11 +561,10 @@ class InstallWizard:
         for r in range(2):
             grid.rowconfigure(r, weight=1)
 
-        # Step 2 buttons — Next goes to Terms; Finish is on the last step
-        self._btn(self.footer, "Next", self.show_terms, primary=True).pack(
-            side="right", padx=24, pady=16
-        )
-        self._btn(self.footer, "Back", self.show_welcome).pack(side="right", pady=16)
+        self._set_nav([
+            ("Next →", self.show_terms, True),
+            ("← Back", self.show_welcome, False),
+        ])
 
     def _refresh_theme_selection(self):
         for tid, card in self._theme_cards.items():
@@ -540,15 +575,15 @@ class InstallWizard:
             )
 
     def show_terms(self):
-        self._clear_body()
+        self._clear()
         self.step_label.config(text="Step 3 of 4 — Terms")
         tk.Label(
             self.body, text="Agree to Terms",
-            font=("Segoe UI Semibold", 22), fg="#ffffff", bg="#0e1218",
+            font=("Segoe UI Semibold", 20), fg="#ffffff", bg="#0e1218",
         ).pack(anchor="w")
 
         frame = tk.Frame(self.body, bg="#151a22")
-        frame.pack(fill="both", expand=True, pady=(12, 8))
+        frame.pack(fill="both", expand=True, pady=(10, 8))
         scroll = tk.Scrollbar(frame)
         scroll.pack(side="right", fill="y")
         text = tk.Text(
@@ -569,25 +604,25 @@ class InstallWizard:
             font=("Segoe UI", 11), fg="#ffffff", bg="#0e1218",
             activebackground="#0e1218", activeforeground="#ffffff",
             selectcolor="#1c2330",
-        ).pack(anchor="w", pady=(8, 0))
+        ).pack(anchor="w", pady=(4, 0))
 
-        self._btn(self.footer, "Agree & Continue", self.show_finish, primary=True).pack(
-            side="right", padx=24, pady=16
-        )
-        self._btn(self.footer, "Back", self.show_theme_picker).pack(side="right", pady=16)
+        self._set_nav([
+            ("Agree & Continue →", self.show_finish, True),
+            ("← Back", self.show_theme_picker, False),
+        ])
 
     def show_finish(self):
         if not self.agreed.get():
             messagebox.showwarning("Terms required", "Please agree to the Terms of Use to continue.")
             return
 
-        self._clear_body()
+        self._clear()
         self.step_label.config(text="Step 4 of 4 — Finish")
         theme = THEMES[self.theme_id]
         tk.Label(
             self.body, text="Ready to finish",
             font=("Segoe UI Semibold", 22), fg="#ffffff", bg="#0e1218",
-        ).pack(anchor="w", pady=(20, 8))
+        ).pack(anchor="w", pady=(12, 8))
         tk.Label(
             self.body,
             text=(
@@ -600,14 +635,20 @@ class InstallWizard:
         ).pack(anchor="w")
 
         preview = tk.Canvas(self.body, width=420, height=140, bg=theme["bg"], highlightthickness=0)
-        preview.pack(anchor="w", pady=24)
+        preview.pack(anchor="w", pady=20)
         preview.create_rectangle(20, 20, 400, 120, outline=theme["accent"], width=2)
-        preview.create_text(210, 55, text="New message appears", fill=theme["text"],
-                            font=("Segoe UI Semibold", 14))
-        preview.create_text(210, 85, text=theme["name"], fill=theme["muted"], font=("Segoe UI", 10))
+        preview.create_text(
+            210, 55, text="New message appears", fill=theme["text"],
+            font=("Segoe UI Semibold", 14),
+        )
+        preview.create_text(
+            210, 85, text=theme["name"], fill=theme["muted"], font=("Segoe UI", 10),
+        )
 
-        self._btn(self.footer, "Finish", self._complete, primary=True).pack(side="right", padx=24, pady=16)
-        self._btn(self.footer, "Back", self.show_terms).pack(side="right", pady=16)
+        self._set_nav([
+            ("Finish", self._complete, True),
+            ("← Back", self.show_terms, False),
+        ])
 
     def _complete(self):
         try:
@@ -616,6 +657,7 @@ class InstallWizard:
                 "installed": True,
                 "terms_accepted": True,
                 "theme": self.theme_id,
+                "setup_version": SETUP_VERSION,
                 "installed_at": datetime.now().isoformat(timespec="seconds"),
             })
             self.finished_ok = True
