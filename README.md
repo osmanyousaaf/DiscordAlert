@@ -27,14 +27,20 @@ Grab the ready-to-run app — no Python install needed:
 ## Quick start
 
 1. Download [`DiscordAlert.exe`](https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert.exe)
-2. Run it — you should see a small “DiscordAlert is running” toast
+2. Run it — the **Setup wizard** opens on first launch:
+   - Click **Install**
+   - Pick a **UI Mode** (5 styles: Cyan HUD, Nebula Glass, Emerald Hex, Classic Midnight, Amber Industrial)
+   - **Agree** to the terms
+   - Click **Finish**
 3. When Windows asks for **notification access**, click **Allow**
 4. In Discord:
    - **Settings → Notifications**
    - Turn **ON** Desktop Notifications
    - Turn **ON** notifications for Direct Messages
 5. Keep DiscordAlert running in the background
-6. Get a DM → fullscreen **“new message appears”** alert shows up
+6. Get a DM → fullscreen **“New message appears”** alert shows up
+
+To re-run setup later, delete `%LOCALAPPDATA%\DiscordAlert\config.json` and launch again.
 
 ### Optional: start with Windows
 

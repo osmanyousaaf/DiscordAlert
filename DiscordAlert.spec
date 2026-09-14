@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
-hiddenimports = ['winsdk', 'winsdk.windows.ui.notifications', 'winsdk.windows.ui.notifications.management', 'winsdk.windows.applicationmodel', 'winsdk.windows.foundation', 'winsdk.windows.foundation.collections']
+hiddenimports = ['winsdk', 'winsdk.windows.ui.notifications', 'winsdk.windows.ui.notifications.management']
 tmp_ret = collect_all('winsdk')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
