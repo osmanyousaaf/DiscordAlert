@@ -10,24 +10,43 @@ Built for people who keep Discord muted, buried under windows, or open on anothe
 
 ## Download (Windows)
 
-Grab the ready-to-run app — no Python install needed:
+**Recommended (fewer antivirus false alarms):**
 
-**[Download DiscordAlert.exe](https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert.exe)**
+**[Download DiscordAlert-Windows.zip](https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert-Windows.zip)**
+
+1. Unzip the folder  
+2. Run `DiscordAlert.exe` inside it  
+
+Optional single-file build:  
+**[DiscordAlert.exe](https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert.exe)**
 
 | | |
 |---|---|
 | **Platform** | Windows 10 / 11 (64-bit) |
-| **Install** | None — double-click and go |
-| **Dismiss** | `Esc` · `Enter` · OK button |
+| **Install** | First launch opens the setup wizard |
+| **Dismiss** | `Esc` · `Enter` · Dismiss button |
 
-> First launch can take a few seconds while Windows unpacks the app. That’s normal.
+### If Windows / Chrome says “Virus detected”
+
+This is a **false positive**. DiscordAlert is unsigned open-source software; Windows Defender and Chrome often flag new PyInstaller apps.
+
+**Unblock on your PC:**
+1. Open **Windows Security → Virus & threat protection → Protection history**
+2. Find `DiscordAlert.exe` → **Actions → Allow / Restore**
+3. Or: right-click the file → **Properties → Unblock** → Apply  
+4. Or add an exclusion for the folder where you keep DiscordAlert
+
+**Submit as false positive (helps everyone):**  
+https://www.microsoft.com/en-us/wdsi/filesubmission
+
+> Tip: the **ZIP / folder build** is flagged much less often than a raw `.exe` download.
 
 ---
 
 ## Quick start
 
-1. Download [`DiscordAlert.exe`](https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert.exe)
-2. Run it — the **Setup wizard** opens on first launch:
+1. Download [`DiscordAlert-Windows.zip`](https://github.com/osmanyousaaf/DiscordAlert/raw/main/dist/DiscordAlert-Windows.zip) and unzip it
+2. Run `DiscordAlert.exe` — the **Setup wizard** opens on first launch:
    - Click **Install**
    - Pick a **UI Mode** (5 styles: Cyan HUD, Nebula Glass, Emerald Hex, Classic Midnight, Amber Industrial)
    - **Agree** to the terms

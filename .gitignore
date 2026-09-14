@@ -9,9 +9,10 @@ __pycache__/
 venv/
 env/
 
-# PyInstaller work files (keep the final exe in dist/)
+# PyInstaller work files (keep the final exe / zip in dist/)
 build/
 *.spec.bak
+dist/DiscordAlert/
 
 # Editor / OS junk
 .idea/

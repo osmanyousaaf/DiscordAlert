@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
-hiddenimports = ['winsdk', 'winsdk.windows.ui.notifications', 'winsdk.windows.ui.notifications.management']
+hiddenimports = ['winsdk', 'winsdk.windows.ui.notifications', 'winsdk.windows.ui.notifications.management', 'winsdk.windows.applicationmodel', 'winsdk.windows.foundation', 'winsdk.windows.foundation.collections']
 tmp_ret = collect_all('winsdk')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
@@ -33,7 +33,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -42,4 +42,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='c:/Users/Byteboom/Desktop/discord alert/version_info.txt',
 )

@@ -1,0 +1,37 @@
+# UTF-8
+#
+# Fixed file info — makes DiscordAlert.exe look like a real product
+# instead of an anonymous PyInstaller stub (helps reduce AV heuristics).
+#
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 2, 0, 0),
+    prodvers=(1, 2, 0, 0),
+    mask=0x3F,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040904B0',
+          [
+            StringStruct(u'CompanyName', u'DiscordAlert'),
+            StringStruct(u'FileDescription', u'DiscordAlert — Discord DM desktop alert'),
+            StringStruct(u'FileVersion', u'1.2.0'),
+            StringStruct(u'InternalName', u'DiscordAlert'),
+            StringStruct(u'LegalCopyright', u'Copyright (c) DiscordAlert contributors'),
+            StringStruct(u'OriginalFilename', u'DiscordAlert.exe'),
+            StringStruct(u'ProductName', u'DiscordAlert'),
+            StringStruct(u'ProductVersion', u'1.2.0'),
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)
