@@ -80,11 +80,7 @@ Pick one of these styles during setup:
 | **Classic Midnight** | Clean & classic |
 | **Amber Industrial** | Bold orange frame |
 
-Glass-style preview:
 
-<p align="center">
-  <img src="assets/alert-glass.png" alt="Glass alert style" width="420" />
-</p>
 
 ---
 
