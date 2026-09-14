@@ -377,7 +377,8 @@ class InstallWizard:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("DiscordAlert Setup")
-        self.root.geometry("780x560")
+        self.root.geometry("820x640")
+        self.root.minsize(820, 640)
         self.root.resizable(False, False)
         self.root.configure(bg="#0e1218")
         self.theme_id = "midnight"
@@ -390,12 +391,12 @@ class InstallWizard:
     def _center(self):
         self.root.update_idletasks()
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        w, h = 780, 560
+        w, h = 820, 640
         self.root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
 
     def _build_shell(self):
         header = tk.Frame(self.root, bg="#151a22", height=64)
-        header.pack(fill="x")
+        header.pack(fill="x", side="top")
         header.pack_propagate(False)
         tk.Label(
             header, text="DiscordAlert Setup", font=("Segoe UI Semibold", 18),
@@ -407,12 +408,13 @@ class InstallWizard:
         )
         self.step_label.pack(side="right", padx=24)
 
-        self.body = tk.Frame(self.root, bg="#0e1218")
-        self.body.pack(fill="both", expand=True, padx=28, pady=18)
-
-        self.footer = tk.Frame(self.root, bg="#151a22", height=72)
+        # Pack footer FIRST so it always stays visible at the bottom.
+        self.footer = tk.Frame(self.root, bg="#151a22", height=78)
         self.footer.pack(fill="x", side="bottom")
         self.footer.pack_propagate(False)
+
+        self.body = tk.Frame(self.root, bg="#0e1218")
+        self.body.pack(fill="both", expand=True, padx=28, pady=(16, 8))
 
     def _clear_body(self):
         for w in self.body.winfo_children():
@@ -437,7 +439,7 @@ class InstallWizard:
         tk.Label(
             self.body, text="Welcome to DiscordAlert",
             font=("Segoe UI Semibold", 26), fg="#ffffff", bg="#0e1218",
-        ).pack(anchor="w", pady=(20, 8))
+        ).pack(anchor="w", pady=(12, 8))
         tk.Label(
             self.body,
             text=(
@@ -446,7 +448,7 @@ class InstallWizard:
                 "and start watching for new messages."
             ),
             font=("Segoe UI", 12), fg="#a8b0bd", bg="#0e1218",
-            justify="left", wraplength=680,
+            justify="left", wraplength=720,
         ).pack(anchor="w")
 
         card = tk.Frame(self.body, bg="#151a22", padx=18, pady=16)
@@ -459,43 +461,53 @@ class InstallWizard:
             tk.Label(card, text=line, font=("Segoe UI", 11), fg="#d7dde8", bg="#151a22").pack(anchor="w", pady=2)
 
         self._btn(self.footer, "Install", self.show_theme_picker, primary=True).pack(
-            side="right", padx=24, pady=14
+            side="right", padx=24, pady=16
         )
-        self._btn(self.footer, "Cancel", self.root.destroy).pack(side="right", pady=14)
+        self._btn(self.footer, "Cancel", self.root.destroy).pack(side="right", pady=16)
 
     def show_theme_picker(self):
         self._clear_body()
         self.step_label.config(text="Step 2 of 4 — UI Mode")
         tk.Label(
             self.body, text="Select UI Mode",
-            font=("Segoe UI Semibold", 22), fg="#ffffff", bg="#0e1218",
+            font=("Segoe UI Semibold", 20), fg="#ffffff", bg="#0e1218",
         ).pack(anchor="w")
         tk.Label(
-            self.body, text="Pick how your message alerts will look. You can keep Classic Midnight for a clean look.",
+            self.body,
+            text="Pick how your message alerts will look. Classic Midnight is the clean option.",
             font=("Segoe UI", 11), fg="#8b95a5", bg="#0e1218",
-        ).pack(anchor="w", pady=(4, 16))
+        ).pack(anchor="w", pady=(2, 10))
 
         grid = tk.Frame(self.body, bg="#0e1218")
         grid.pack(fill="both", expand=True)
 
         self._theme_cards = {}
-        # 3 on first row, 2 on second
         positions = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)]
         for (row, col), tid in zip(positions, THEME_ORDER):
             theme = THEMES[tid]
-            card = tk.Frame(grid, bg=theme["panel"], highlightthickness=2,
-                            highlightbackground=theme["accent"] if tid == self.theme_id else "#2a3140",
-                            highlightcolor=theme["accent"], padx=10, pady=12, cursor="hand2")
-            card.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
-            swatch = tk.Canvas(card, width=200, height=70, bg=theme["bg"], highlightthickness=0)
+            selected = tid == self.theme_id
+            card = tk.Frame(
+                grid, bg=theme["panel"], highlightthickness=3 if selected else 2,
+                highlightbackground=theme["accent"] if selected else "#2a3140",
+                highlightcolor=theme["accent"], padx=8, pady=8, cursor="hand2",
+            )
+            card.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
+            swatch = tk.Canvas(card, width=180, height=54, bg=theme["bg"], highlightthickness=0)
             swatch.pack()
-            swatch.create_rectangle(8, 10, 192, 60, outline=theme["accent"], width=2)
-            swatch.create_oval(20, 22, 48, 50, outline=theme["accent"], width=2)
-            swatch.create_text(120, 35, text="New message", fill=theme["text"], font=("Segoe UI", 10, "bold"))
-            tk.Label(card, text=theme["name"], font=("Segoe UI Semibold", 12),
-                     fg=theme["text"], bg=theme["panel"]).pack(anchor="w", pady=(8, 0))
-            tk.Label(card, text=theme["blurb"], font=("Segoe UI", 9),
-                     fg=theme["muted"], bg=theme["panel"]).pack(anchor="w")
+            swatch.create_rectangle(6, 8, 174, 46, outline=theme["accent"], width=2)
+            swatch.create_oval(16, 16, 40, 40, outline=theme["accent"], width=2)
+            swatch.create_text(
+                110, 28, text="New message", fill=theme["text"],
+                font=("Segoe UI", 9, "bold"),
+            )
+            tk.Label(
+                card, text=theme["name"], font=("Segoe UI Semibold", 11),
+                fg=theme["text"], bg=theme["panel"],
+            ).pack(anchor="w", pady=(6, 0))
+            tk.Label(
+                card, text=theme["blurb"], font=("Segoe UI", 9),
+                fg=theme["muted"], bg=theme["panel"],
+            ).pack(anchor="w")
 
             def select(tid=tid):
                 self.theme_id = tid
@@ -513,8 +525,11 @@ class InstallWizard:
         for r in range(2):
             grid.rowconfigure(r, weight=1)
 
-        self._btn(self.footer, "Next", self.show_terms, primary=True).pack(side="right", padx=24, pady=14)
-        self._btn(self.footer, "Back", self.show_welcome).pack(side="right", pady=14)
+        # Step 2 buttons — Next goes to Terms; Finish is on the last step
+        self._btn(self.footer, "Next", self.show_terms, primary=True).pack(
+            side="right", padx=24, pady=16
+        )
+        self._btn(self.footer, "Back", self.show_welcome).pack(side="right", pady=16)
 
     def _refresh_theme_selection(self):
         for tid, card in self._theme_cards.items():
@@ -557,9 +572,9 @@ class InstallWizard:
         ).pack(anchor="w", pady=(8, 0))
 
         self._btn(self.footer, "Agree & Continue", self.show_finish, primary=True).pack(
-            side="right", padx=24, pady=14
+            side="right", padx=24, pady=16
         )
-        self._btn(self.footer, "Back", self.show_theme_picker).pack(side="right", pady=14)
+        self._btn(self.footer, "Back", self.show_theme_picker).pack(side="right", pady=16)
 
     def show_finish(self):
         if not self.agreed.get():
@@ -591,8 +606,8 @@ class InstallWizard:
                             font=("Segoe UI Semibold", 14))
         preview.create_text(210, 85, text=theme["name"], fill=theme["muted"], font=("Segoe UI", 10))
 
-        self._btn(self.footer, "Finish", self._complete, primary=True).pack(side="right", padx=24, pady=14)
-        self._btn(self.footer, "Back", self.show_terms).pack(side="right", pady=14)
+        self._btn(self.footer, "Finish", self._complete, primary=True).pack(side="right", padx=24, pady=16)
+        self._btn(self.footer, "Back", self.show_terms).pack(side="right", pady=16)
 
     def _complete(self):
         try:
